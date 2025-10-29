@@ -1,5 +1,8 @@
 name: vprofile CICD Workflow
 
+env:
+  ECR_REPOSITORY: 'vprofile-appimage'
+
 permissions:
   contents: read
 
@@ -82,3 +85,36 @@ jobs:
         with:
           name: trivy-report
           path: trivy-report.json
+    
+  Build-and-Push-Docker-Image:
+    runs-on: ubuntu-latest
+    enviroment: CiCD_Practise
+    needs: [Build, Test, Security-Scan]
+    if: github.ref == 'refs/heads/main'
+    steps:
+      - name: code checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      
+      - name: Configre AWS Creds
+        uses: aws-actions/configure-aws-credentials@v1
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.SECRET_ACCESS_KEY }}
+          aws-region: ${{ vsrs.AWS_REGION }}
+          
+      - name: Login to Amazon ECR
+        # to get output for next step must configre id
+        id: login-ecr  
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - name: Build, Tag, and Push Docker Image to ECR
+        id: build-image
+        env:
+          ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+          Image_Tag: ${{ github.sha }}
+        run: |
+          docker build -f Docker-files/app/multistage/Dockerfile -t $ECR_REGISTRY/$ECR_REPOSITORY:$Image_Tag .
+          docker push $ECR_REGISTRY/$ECR_REPOSITORY:$Image_Tag
+          echo "Docker image = $ECR_REGISTRY/$ECR_REPOSITORY:$Image_Tag" >> $GITHUB_OUTPUT
