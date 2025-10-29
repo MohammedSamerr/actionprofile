@@ -102,7 +102,7 @@ jobs:
         with:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.SECRET_ACCESS_KEY }}
-          aws-region: ${{ vsrs.AWS_REGION }}
+          aws-region: ${{ env.AWS_REGION }}
           
       - name: Login to Amazon ECR
         # to get output for next step must configre id
